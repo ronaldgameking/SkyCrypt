@@ -90,7 +90,7 @@ module.exports = (app, db) => {
         };
 
         if (req.query.find) {
-            const uuid = (await helper.resolveUsernameOrUuid(req.query.find, db, true)).uuid;
+            const uuid = (await helper.resolveUsernameOrUuid(req.query.find, db, { cacheOnly: true })).uuid;
 
             const rank = lb.sortedBy > 0 ?
                 await redisClient.zrank(`lb_${lb.key}`, uuid) :
@@ -130,7 +130,7 @@ module.exports = (app, db) => {
                 amount: lb.format(results[i + 1]),
                 raw: results[i + 1],
                 uuid: results[i],
-                username: (await helper.resolveUsernameOrUuid(results[i], db, true)).display_name
+                username: (await helper.resolveUsernameOrUuid(results[i], db, { cacheOnly: true })).display_name
             };
 
             if ('self' in output && output.self.rank == lbPosition.rank)

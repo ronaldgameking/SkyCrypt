@@ -566,7 +566,7 @@ async function getItems(base64, customTextures = false, packs, cacheOnly = false
                     itemLore.push('');
 
                 const spawnedFor = item.extra.spawned_for;
-                const spawnedForUser = await helper.resolveUsernameOrUuid(spawnedFor, db, cacheOnly);
+                const spawnedForUser = await helper.resolveUsernameOrUuid(spawnedFor, db, { cacheOnly: cacheOnly });
 
                 itemLore.push(`§7By: §c<a href="/stats/${spawnedFor}">${spawnedForUser.display_name}</a>`);
             }
@@ -2017,7 +2017,7 @@ module.exports = {
         output.kills = killsDeaths.filter(a => a.type == 'kills').sort((a, b) => b.amount - a.amount);
         output.deaths = killsDeaths.filter(a => a.type == 'deaths').sort((a, b) => b.amount - a.amount);
 
-        const playerObject = await helper.resolveUsernameOrUuid(profile.uuid, db, cacheOnly);
+        const playerObject = await helper.resolveUsernameOrUuid(profile.uuid, db, {cacheOnly: cacheOnly});
 
         output.display_name = playerObject.display_name;
 
@@ -2030,7 +2030,7 @@ module.exports = {
 
         const members = await Promise
         .all(
-            Object.keys(profile.members).map(a => helper.resolveUsernameOrUuid(a, db, cacheOnly))
+            Object.keys(profile.members).map(a => helper.resolveUsernameOrUuid(a, db, {cacheOnly: cacheOnly}))
         );
 
         if(userInfo){
@@ -2848,7 +2848,7 @@ module.exports = {
 
         (
             await Promise.all(
-                Object.keys(profile.members).map(a => helper.resolveUsernameOrUuid(a, db, cacheOnly))
+                Object.keys(profile.members).map(a => helper.resolveUsernameOrUuid(a, db, {cacheOnly: cacheOnly}))
             )
         ).forEach(a => members[a.uuid] = a.display_name);
 
@@ -3129,7 +3129,7 @@ module.exports = {
     getProfile: async (db, paramPlayer, paramProfile, options = { cacheOnly: false }) => {
         if(paramPlayer.length != 32){
             try{
-                const { uuid } = await helper.resolveUsernameOrUuid(paramPlayer, db);
+                const { uuid } = await helper.resolveUsernameOrUuid(paramPlayer, db, options);
 
                 paramPlayer = uuid;
             }catch(e){

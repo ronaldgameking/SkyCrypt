@@ -78,8 +78,16 @@ module.exports = {
         return "";
     },
 
-    resolveUsernameOrUuid: async (uuid, db, cacheOnly = false) => {
+    resolveUsernameOrUuid: async (uuid, db, options = { cacheOnly: false, debugMode: true }) => {
+        const funcId = `username_${((new Date().getTime()) + Math.floor((Math.random() * 1000000) + 1)).toString().substr(7)}`;
         let user = null;
+
+        const debugMode = /* options?.debugMode ? options.debugMode : false */ true;
+
+        if(debugMode){
+            console.log(`${funcId}: resolveUsernameOrUuid called.`);
+            console.time(funcId);
+        }
 
         uuid = uuid.replace(/\-/g, '');
 
@@ -113,7 +121,7 @@ module.exports = {
                 skin_data.capeurl = user.capeurl;
         }
 
-        if(cacheOnly === false && (user === null || (+new Date() - user.date) > 7200 * 1000)){
+        if(options.cacheOnly === false && (user === null || (+new Date() - user.date) > 7200 * 1000)){
             let profileRequest = axios(`https://api.ashcon.app/mojang/v1/user/${uuid}`, { timeout: 5000 });
 
             profileRequest.then(async response => {
@@ -160,7 +168,7 @@ module.exports = {
                                 { _id: doc._id }
                             );
 
-                            module.exports.resolveUsernameOrUuid(doc.uuid, db).catch(console.error);
+                            module.exports.resolveUsernameOrUuid(doc.uuid, db, options).catch(console.error);
                         }
                     }
                 }catch(e){
@@ -175,7 +183,8 @@ module.exports = {
                         { $set: { date: +new Date() } }
                     );
 
-                console.error(err);
+                if(!(err?.response?.status === 404))
+                    console.error(err);
             });
 
             if(!user){
@@ -195,21 +204,55 @@ module.exports = {
                     return { uuid: data.id, display_name: data.username, skin_data };
                 }catch(e){
                     if(isUuid){
+                        if(debugMode){
+                            console.log(`${funcId}: uuid ${uuid} returned.`);
+                            console.timeEnd(funcId);
+                        }
+
                         return { uuid, display_name: uuid, skin_data };
                     }else{
-                        if(module.exports.hasPath(e, 'response', 'data', 'reason'))
+                        if(e?.response?.status === 404) {
+                            if(debugMode){
+                                console.log(`${funcId}: username "${uuid}" doesn't exist.`);
+                                console.timeEnd(funcId);
+                            }
+
+                            throw "This username doesn't exist.";
+                        } else if(e?.response?.data?.reason){
+                            if(debugMode){
+                                console.log(`${funcId}: failed due to ${e.response.data.reason}.`);
+                                console.timeEnd(funcId);
+                            }
+
                             throw e.response.data.reason;
-                        else
+                        }else{
+                            if(debugMode){
+                                console.log(`${funcId}: failed resolving username.`);
+                                console.timeEnd(funcId);
+                            }
+
                             throw "Failed resolving username.";
+                        }
                     }
                 }
             }
         }
 
-        if(user)
+        if(user){
+            if(debugMode){
+                console.log(`${funcId}: username ${user.username} returned.`);
+                console.timeEnd(funcId);
+            }
+
             return { uuid: user.uuid, display_name: user.username, emoji: user.emoji, skin_data };
-        else
+        }else{
+            if(debugMode){
+                console.log(`${funcId}: uuid ${uuid} returned.`);
+                console.timeEnd(funcId);
+            }
+
             return { uuid, display_name: uuid, skin_data };
+        }
     },
 
     getGuild: async (uuid, db, cacheOnly = false) => {
@@ -237,7 +280,7 @@ module.exports = {
                     return null;
 
                 guildObject.level = module.exports.getGuildLevel(guildObject.exp);
-                guildObject.gmUser = await module.exports.resolveUsernameOrUuid(guildObject.gm, db, cacheOnly);
+                guildObject.gmUser = await module.exports.resolveUsernameOrUuid(guildObject.gm, db, { cacheOnly: cacheOnly });
                 guildObject.rank = guildMember.rank;
 
                 return guildObject;
